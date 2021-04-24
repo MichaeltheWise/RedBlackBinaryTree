@@ -31,8 +31,8 @@ class RedBlackBinaryTree:
         # Assign root as a null node first
         self.root = self.null_node
 
-    # def __contains__(self, key):
-    #     return self.find(key)
+    def __contains__(self, key):
+        return self.find(key)
 
     def insert(self, num):
         """
@@ -76,9 +76,9 @@ class RedBlackBinaryTree:
         if new_node.parent.parent is None:
             return
 
-        self.rebalance(new_node)
+        self.insert_rebalance(new_node)
 
-    def rebalance(self, node):
+    def insert_rebalance(self, node):
         """
         Rebalance the color after insertion
         :param node: current node
@@ -202,9 +202,176 @@ class RedBlackBinaryTree:
         tmp.left = node
         node.parent = tmp
 
+    def delete(self, node, num):
+        """
+        Implementation of removal
+        :param node: node
+        :param num: number to be removed
+        :return: None
+        """
+        # Replicate the find function here for further operation after finding the match
+        curr = self.null_node
+        while node != self.null_node:
+            if node.val == num:
+                curr = node
+            if node.val > num:
+                node = node.left
+            else:
+                node = node.right
+
+        if curr == self.null_node:
+            print("Node not found")
+            return
+
+        tmp = curr
+        tmp_color = tmp.color
+        # Basic removal with one child or zero child
+        if curr.left == self.null_node:
+            # Replace with right if left empty
+            replacement = curr.right
+            self._parent_reassign(curr, curr.right)
+        elif curr.right == self.null_node:
+            # Replace with right if left empty
+            replacement = curr.left
+            self._parent_reassign(curr, curr.left)
+        else:
+            # Removal with two children
+            tmp = self._minVal(curr.right)
+            tmp_color = tmp.color
+            replacement = tmp.right
+            if tmp.parent == curr:
+                # If the minimum value is right below the node to be deleted, simple replacement
+                replacement.parent = tmp
+            else:
+                self._parent_reassign(tmp, tmp.right)
+                tmp.right = curr.right
+                tmp.right.parent = tmp
+
+            self._parent_reassign(curr, tmp)
+            tmp.left = curr.left
+            tmp.left.parent = tmp
+            tmp.color = curr.color
+
+        # Red black tree deletion balancing
+        if tmp_color == 0:
+            self.delete_rebalance(replacement)
+
+    def delete_rebalance(self, node):
+        # If node is double black situation
+        while node != self.root and node.color == 0:
+            if node == node.parent.left:
+                # Find the sibling
+                sibling = node.parent.right
+                # CASE 1: if sibling is red
+                # Adjustment, rotate then reassign sibling
+                if sibling.color == 1:
+                    sibling.color = 0
+                    sibling.parent.color = 1
+                    self.left_rotate(node.parent)
+                    sibling = node.parent.right
+                # CASE 2: if sibling is black and children are both black
+                # Recoloring, recolor then proceed upward
+                if sibling.left.color == 0 and sibling.right.color == 0:
+                    sibling.color = 1
+                    node = node.parent
+                else:
+                    # CASE 3: if sibling is black and children have red
+                    # Restructuring, LL, LR, RR, RL cases
+                    if sibling.right.color == 0:
+                        sibling.left.color = 0
+                        sibling.color = 1
+                        self.right_rotate(sibling)
+                        sibling = node.parent.right
+                    sibling.color = node.parent.color
+                    node.parent.color = 0
+                    sibling.right.color = 0
+                    self.left_rotate(node.parent)
+                    node = self.root
+            else:
+                sibling = node.parent.left
+                # CASE 1: if sibling is red
+                # Adjustment, rotate then reassign sibling
+                if sibling.color == 1:
+                    sibling.color = 0
+                    node.parent.color = 1
+                    self.right_rotate(node.parent)
+                    sibling = node.parent.left
+                # CASE 2: if sibling is black and children are both black
+                # Recoloring, recolor then proceed upward
+                if sibling.left.color == 0 and sibling.right.color == 0:
+                    sibling.color = 1
+                    node = node.parent
+                else:
+                    # CASE 3: if sibling is black and children have red
+                    # Restructuring, LL, LR, RR, RL cases
+                    if sibling.left.color == 0:
+                        sibling.right.color = 0
+                        sibling.color = 1
+                        self.left_rotate(sibling)
+                        sibling = node.parent.left
+                    sibling.color = sibling.parent.color
+                    node.parent.color = 0
+                    sibling.left.color = 0
+                    self.right_rotate(node.parent)
+                    node = self.root
+        # Make sure the root node is black
+        node.color = 0
+
+    def _parent_reassign(self, node1, node2):
+        """
+        Parent reassignment needed for removal
+        :param node1: the node that is going to be deleted
+        :param node2: the node replacing it
+        :return: None
+        """
+        if node1.parent is None:
+            self.root = node2
+        elif node1 == node1.parent.left:
+            node1.parent.left = node2
+        else:
+            node1.parent.right = node2
+        node1.parent = node2.parent
+
+    def _minVal(self, node):
+        """
+        Find the minimum value down the tree
+        :param node: node
+        :return: the minimum value node
+        """
+        while node.left != self.null_node:
+            node = node.left
+        return node
+
+    def find(self, num):
+        """
+        Binary tree search
+        :param num: desired number
+        :return: Boolean True/False or None
+        """
+        if self.root is not None:
+            return self._find(self.root, num)
+        else:
+            return None
+
+    def _find(self, node, num):
+        """
+        Implementation of search
+        :param node: node
+        :param num: desired number
+        :return: Boolean True/False
+        """
+        if node.val == num:
+            return True
+        elif num < node.val and node.left != self.null_node:
+            return self._find(node.left, num)
+        elif num > node.val and node.right != self.null_node:
+            return self._find(node.right, num)
+        else:
+            return False
+
     def inorder_print_tree(self):
         """
-        Binary Tree in order presentation
+        Binary Tree inorder presentation
         :return: List of tree values
         """
         if self.root != self.null_node:
@@ -220,6 +387,46 @@ class RedBlackBinaryTree:
             self._inorder_traversal(node.left, res)
             res.append(node.val)
             self._inorder_traversal(node.right, res)
+            return res
+
+    def preorder_print_tree(self):
+        """
+        Binary Tree preorder presentation
+        :return: List of tree values
+        """
+        if self.root != self.null_node:
+            return self._preorder_traversal(self.root, res=[])
+
+    def _preorder_traversal(self, node, res=[]):
+        """
+        Implementation of preorder traversal printing
+        :param node: node
+        :return: List of tree values
+        """
+        if node is not self.null_node:
+            res.append(node.val)
+            self._preorder_traversal(node.left, res)
+            self._preorder_traversal(node.right, res)
+            return res
+
+    def postorder_print_tree(self):
+        """
+        Binary Tree postorder presentation
+        :return: List of tree values
+        """
+        if self.root != self.null_node:
+            return self._postorder_traversal(self.root, res=[])
+
+    def _postorder_traversal(self, node, res=[]):
+        """
+        Implementation of postorder traversal printing
+        :param node: node
+        :return: List of tree values
+        """
+        if node is not self.null_node:
+            self._postorder_traversal(node.left, res)
+            self._postorder_traversal(node.right, res)
+            res.append(node.val)
             return res
 
     def graphicalPrintTree(self):
@@ -250,6 +457,15 @@ def main():
     rb_test_tree.insert(40)
     rb_test_tree.insert(30)
     rb_test_tree.insert(35)
+    print(30 in rb_test_tree)
+    print(50 in rb_test_tree)
+    print("\nInorder Traversal: ")
+    print(rb_test_tree.inorder_print_tree())
+    print("\nPreorder Traversal: ")
+    print(rb_test_tree.preorder_print_tree())
+    print("\nPostorder Traversal: ")
+    print(rb_test_tree.postorder_print_tree())
+    print("\nGraphical Representation: ")
     print(rb_test_tree.graphicalPrintTree())
 
 
